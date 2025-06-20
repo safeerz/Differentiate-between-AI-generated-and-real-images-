@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Fake Image Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+
+        .file-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 200px;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-label:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        .file-upload-label.file-selected {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text strong {
+            display: block;
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-text span {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        #file {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            min-width: 200px;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-container {
+            margin: 2rem 0;
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .result-container {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-icon {
+            font-size: 3rem;
+        }
+
+        .result-text h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-fake {
+            color: #dc3545;
+        }
+
+        .result-real {
+            color: #28a745;
+        }
+
+        .confidence-section {
+            margin: 1.5rem 0;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+        }
+
+        .confidence-fill.fake {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+
+        .confidence-fill.real {
+            background: linear-gradient(90deg, #28a745, #218838);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .info-card {
+            background: rgba(255,255,255,0.9);
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .info-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card h3 {
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .info-card p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+            color: #667eea;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .upload-section {
+                padding: 1.5rem;
+            }
+            
+            .file-upload-label {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 AI Fake Image Detector</h1>
+            <p>Upload an image to detect if it's real or AI-generated</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="file-upload-wrapper">
+                <input type="file" id="file" accept="image/*" required>
+                <label for="file" class="file-upload-label">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        <strong>Choose an image file</strong>
+                        <span>or drag and drop</span>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="preview-container">
+                <img id="preview" class="preview-image" alt="Preview">
+            </div>
+            
+            <button id="analyzeBtn" class="analyze-btn" disabled>
+                <span>🔍 Analyze Image</span>
+            </button>
+
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Analyzing image...</p>
+            </div>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-header">
+                <div class="result-icon" id="resultIcon">🔍</div>
+                <div class="result-text">
+                    <h2 id="resultTitle">Result</h2>
+                    <p id="resultSubtitle">Analysis complete</p>
+                </div>
+            </div>
+
+            <div class="confidence-section">
+                <div class="confidence-label">
+                    <span>Confidence Level</span>
+                    <span class="confidence-value" id="confidenceValue">0%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="disclaimer">
+                <p><strong>Note:</strong> This is a demonstration using simulated AI detection. 
+                Real AI detection requires specialized models and should not be considered 100% accurate.</p>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon">🤖</div>
+                <h3>AI Detection</h3>
+                <p>Uses advanced machine learning to identify AI-generated images</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">⚡</div>
+                <h3>Fast Analysis</h3>
+                <p>Get results in seconds with high accuracy predictions</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🔒</div>
+                <h3>Secure</h3>
+                <p>Your images are processed locally and not stored</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileLabel = document.querySelector('.file-upload-label');
+        const uploadText = document.querySelector('.upload-text strong');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const previewContainer = document.querySelector('.preview-container');
+        const preview = document.getElementById('preview');
+        const loading = document.querySelector('.loading');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultIcon = document.getElementById('resultIcon');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultSubtitle = document.getElementById('resultSubtitle');
+        const confidenceValue = document.getElementById('confidenceValue');
+        const confidenceFill = document.getElementById('confidenceFill');
+
+        // File selection handling
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                uploadText.textContent = file.name;
+                fileLabel.classList.add('file-selected');
+                analyzeBtn.disabled = false;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Drag and drop functionality
+        fileLabel.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#764ba2';
+            fileLabel.style.background = '#f0f2ff';
+        });
+
+        fileLabel.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#667eea';
+            fileLabel.style.background = '#f8f9ff';
+        });
+
+        fileLabel.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#667eea';
+            fileLabel.style.background = '#f8f9ff';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                fileInput.files = files;
+                const file = files[0];
+                uploadText.textContent = file.name;
+                fileLabel.classList.add('file-selected');
+                analyzeBtn.disabled = false;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Analyze button
+        analyzeBtn.addEventListener('click', function() {
+            if (!fileInput.files.length) return;
+
+            // Show loading
+            loading.style.display = 'block';
+            analyzeBtn.disabled = true;
+            resultContainer.style.display = 'none';
+
+            // Simulate AI analysis (replace with actual API call)
+            setTimeout(() => {
+                // Simulate random result for demonstration
+                const isFake = Math.random() > 0.5;
+                const confidence = Math.random() * 0.4 + 0.6; // 60-100% confidence
+
+                showResult(isFake, confidence);
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }, 2000);
+        });
+
+        function showResult(isFake, confidence) {
+            resultContainer.style.display = 'block';
+            
+            if (isFake) {
+                resultIcon.textContent = '🚨';
+                resultTitle.textContent = 'FAKE';
+                resultTitle.className = 'result-fake';
+                resultSubtitle.textContent = 'This image appears to be AI-generated';
+                confidenceFill.className = 'confidence-fill fake';
+            } else {
+                resultIcon.textContent = '✅';
+                resultTitle.textContent = 'REAL';
+                resultTitle.className = 'result-real';
+                resultSubtitle.textContent = 'This image appears to be authentic';
+                confidenceFill.className = 'confidence-fill real';
+            }
+            
+            const confidencePercent = Math.round(confidence * 100);
+            confidenceValue.textContent = confidencePercent + '%';
+            confidenceFill.style.width = confidencePercent + '%';
+            
+            // Scroll to result
+            resultContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Note: In a real implementation, you would replace the setTimeout simulation
+        // with an actual API call to your Flask backend or ML model
+        /*
+        async function analyzeImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                showResult(result.is_fake, result.confidence);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error analyzing image');
+            }
+        }
+        */
+    </script>
+</body>
+</html>
